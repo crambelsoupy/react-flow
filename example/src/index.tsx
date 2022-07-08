@@ -35,6 +35,7 @@ import UseUpdateNodeInternals from './UseUpdateNodeInternals';
 import UseReactFlow from './UseReactFlow';
 import Validation from './Validation';
 import UseKeyPress from './UseKeyPress';
+import Structure from './Structure';
 
 const routes = [
   {
@@ -164,6 +165,10 @@ const routes = [
   {
     path: '/use-key-press',
     component: UseKeyPress,
+  },
+  {
+    path: '/structure',
+    component: Structure,
   },
 ];
 
