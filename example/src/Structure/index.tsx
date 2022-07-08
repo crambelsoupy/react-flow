@@ -14,6 +14,8 @@ import ReactFlow, {
   useEdgesState,
   OnSelectionChangeParams,
 } from 'react-flow-renderer';
+import ProcessNode from './ProcessNode';
+import ResourceNode from './ResourceNode';
 
 const onNodeDragStart = (_: ReactMouseEvent, node: Node, nodes: Node[]) => console.log('drag start', node, nodes);
 const onNodeDrag = (_: ReactMouseEvent, node: Node, nodes: Node[]) => console.log('drag', node, nodes);
@@ -30,11 +32,8 @@ const onSelectionContextMenu = (event: ReactMouseEvent, nodes: Node[]) => {
   console.log('selection context menu', nodes);
 };
 const onNodeClick = (_: ReactMouseEvent, node: Node) => console.log('node click:', node);
-
 const onSelectionChange = ({ nodes, edges }: OnSelectionChangeParams) => console.log('selection change', nodes, edges);
-const onInit = (reactFlowInstance: ReactFlowInstance) => {
-  console.log('pane ready:', reactFlowInstance);
-};
+const onInit = (reactFlowInstance: ReactFlowInstance) => console.log('pane ready:', reactFlowInstance);
 
 const onMoveStart = (_: MouseEvent | TouchEvent, viewport: Viewport) => console.log('zoom/move start', viewport);
 const onMoveEnd = (_: MouseEvent | TouchEvent, viewport: Viewport) => console.log('zoom/move end', viewport);
@@ -48,96 +47,31 @@ const onEdgesDelete = (edges: Edge[]) => console.log('edges delete', edges);
 
 const initialNodes: Node[] = [
   {
-    id: '1',
-    type: 'input',
+    id: "0",
+    type: "processNode",
     data: {
-      label: (
-        <>
-          Welcome to <strong>React Flow!</strong>
-        </>
-      ),
+      name: "some_function",
+      inputs: [
+        { label: "Dataset", type: "data" },
+        { label: "Labels", type: "data" }
+      ],
+      outputs: [
+        { label: "Model", type: "data" },
+        { label: "Error", type: "value" }
+      ]
     },
-    position: { x: 250, y: 0 },
+    position: { x: 500, y: 80 }
   },
   {
-    id: '2',
-    data: {
-      label: (
-        <>
-          This is a <strong>default node</strong>
-        </>
-      ),
-    },
-    position: { x: 100, y: 100 },
+    id: "1",
+    type: "resourceNode",
+    data: { name: "generated_value", value: "5" },
+    position: { x: 700, y: 180 }
   },
-  {
-    id: '3',
-    data: {
-      label: (
-        <>
-          This one has a <strong>custom style</strong>
-        </>
-      ),
-    },
-    position: { x: 400, y: 100 },
-    style: { background: '#D6D5E6', color: '#333', border: '1px solid #222138', width: 180 },
-  },
-  {
-    id: '4',
-    position: { x: 250, y: 200 },
-    data: {
-      label: (
-        <>
-          You can find the docs on{' '}
-          <a href="https://github.com/wbkd/react-flow" target="_blank" rel="noopener noreferrer">
-            Github
-          </a>
-        </>
-      ),
-    },
-  },
-  {
-    id: '5',
-    data: {
-      label: (
-        <>
-          Or check out the other <strong>examples</strong>
-        </>
-      ),
-    },
-    position: { x: 250, y: 325 },
-  },
-  {
-    id: '6',
-    type: 'output',
-    data: {
-      label: (
-        <>
-          An <strong>output node</strong>
-        </>
-      ),
-    },
-    position: { x: 100, y: 480 },
-  },
-  { id: '7', type: 'output', data: { label: 'Another output node' }, position: { x: 400, y: 450 } },
 ];
 
 const initialEdges: Edge[] = [
-  { id: 'e1-2', source: '1', target: '2', label: 'this is an edge label' },
-  { id: 'e1-3', source: '1', target: '3' },
-  { id: 'e3-4', source: '3', target: '4', animated: true, label: 'animated edge' },
-  { id: 'e4-5', source: '4', target: '5', label: 'edge with arrow head' },
-  { id: 'e5-6', source: '5', target: '6', type: 'smoothstep', label: 'smooth step edge' },
-  {
-    id: 'e5-7',
-    source: '5',
-    target: '7',
-    type: 'step',
-    style: { stroke: '#f6ab6c' },
-    label: 'a step edge',
-    animated: true,
-    labelStyle: { fill: '#f6ab6c', fontWeight: 700 },
-  },
+  { id: "e0-1", source: "0__o__data", target: "1__i__data", animated: false }
 ];
 
 const connectionLineStyle: CSSProperties = { stroke: '#ddd' };
@@ -152,10 +86,9 @@ const nodeStrokeColor = (n: Node): string => {
   return '#eee';
 };
 
-const nodeColor = (n: Node): string => {
-  if (n.style?.background) return n.style.background as string;
-
-  return '#fff';
+const nodeTypes = {
+  processNode: ProcessNode,
+  resourceNode: ResourceNode
 };
 
 const OverviewFlow = () => {
@@ -167,6 +100,7 @@ const OverviewFlow = () => {
     <ReactFlow
       nodes={nodes}
       edges={edges}
+      nodeTypes={nodeTypes}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onNodeClick={onNodeClick}
@@ -201,7 +135,20 @@ const OverviewFlow = () => {
       onNodesDelete={onNodesDelete}
       onEdgesDelete={onEdgesDelete}
     >
-      <MiniMap nodeStrokeColor={nodeStrokeColor} nodeColor={nodeColor} nodeBorderRadius={2} />
+      <MiniMap
+        nodeStrokeColor={nodeStrokeColor}
+        nodeColor={(node) => {
+          switch (node.type) {
+            case "resourceNode":
+              return "LightGreen";
+            case "processNode":
+              return "Lavender";
+            default:
+              return "#eee";
+          }
+        }}
+        nodeBorderRadius={2}
+      />
       <Controls />
       <Background color="#aaa" gap={25} />
     </ReactFlow>

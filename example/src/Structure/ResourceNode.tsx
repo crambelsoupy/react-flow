@@ -21,7 +21,7 @@ const ResourceNode: React.FC<ResourceNodeProps> = ({
     <Node
       label={data.name}
       selected={selected}
-      color={"Lavender"}
+      color={"#E0FFE0"}
       content={
         <div style={ContentIOStyle}>
           {"= " + data.value}
