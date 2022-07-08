@@ -13,7 +13,9 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   OnSelectionChangeParams,
+  EdgeChange,
 } from 'react-flow-renderer';
+import { Process, Resource } from './Data';
 import ProcessNode from './ProcessNode';
 import ResourceNode from './ResourceNode';
 
@@ -47,31 +49,22 @@ const onEdgesDelete = (edges: Edge[]) => console.log('edges delete', edges);
 
 const initialNodes: Node[] = [
   {
-    id: "0",
-    type: "processNode",
-    data: {
-      name: "some_function",
-      inputs: [
-        { label: "Dataset", type: "data" },
-        { label: "Labels", type: "data" }
-      ],
-      outputs: [
-        { label: "Model", type: "data" },
-        { label: "Error", type: "value" }
-      ]
-    },
+    id: Process.concept,
+    type: "process",
+    data: Process,
     position: { x: 500, y: 80 }
   },
   {
-    id: "1",
-    type: "resourceNode",
-    data: { name: "generated_value", value: "5" },
-    position: { x: 700, y: 180 }
+    id: Resource.concept,
+    type: "resource",
+    data: Resource,
+    position: { x: 700, y: 180 },
   },
 ];
 
 const initialEdges: Edge[] = [
-  { id: "e0-1", source: "0__o__data", target: "1__i__data", animated: false }
+  { id: "cash.balance_sales.cash_balance", source: "cash.balance", target: "sales.cash_balance", animated: false },
+  { id: "sales.increment_cash_cash.balance", source: "sales.increment_cash", target: "cash.balance", animated: false }
 ];
 
 const connectionLineStyle: CSSProperties = { stroke: '#ddd' };
@@ -87,8 +80,8 @@ const nodeStrokeColor = (n: Node): string => {
 };
 
 const nodeTypes = {
-  processNode: ProcessNode,
-  resourceNode: ResourceNode
+  process: ProcessNode,
+  resource: ResourceNode
 };
 
 const OverviewFlow = () => {
@@ -139,9 +132,9 @@ const OverviewFlow = () => {
         nodeStrokeColor={nodeStrokeColor}
         nodeColor={(node) => {
           switch (node.type) {
-            case "resourceNode":
+            case "resource":
               return "LightGreen";
-            case "processNode":
+            case "process":
               return "Lavender";
             default:
               return "#eee";

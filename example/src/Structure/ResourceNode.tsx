@@ -2,44 +2,58 @@ import React, { memo } from "react";
 import * as R from "ramda";
 import { Connection, Handle, Position } from "react-flow-renderer";
 import Node, { ContentHandleStyle, ContentHeaderStyle, ContentIOStyle, ContentLeftStyle, ContentTextLeftStyle, ContentTextRightStyle } from "./Node";
+import { ResourceStructure, ProcessStructure, PropertyStructure, EventStructure, Table } from "@elaraai/edk/lib";
 
-const isValidInput = (connection: Connection) => connection.source ? R.last(R.split("__", connection.source)) === "value" : false;
-const isValidOutput = (connection: Connection) => connection.target ? R.last(R.split("__", connection.target)) === "value" : false;
+const isValidProperty = (connection: Connection, value: string) => {
+  console.log('Resource.isValidProperty', { connection, value})
+  return connection.source ? connection.source === value : false
+};
 
 interface ResourceNodeProps {
-    data: {
-      name: string,
-      value: number,
-    },
-    selected: boolean;
+  data: {
+    name: string,
+    value: number,
+
+    // real
+    concept: string,
+    properties: Record<string, PropertyStructure>,
+    instance_table: Table
+
+  },
+  selected: boolean;
 }
 const ResourceNode: React.FC<ResourceNodeProps> = ({
-    data,
-    selected,
+  data,
+  selected,
 }: ResourceNodeProps) => {
   return (
     <Node
-      label={data.name}
+      label={data.concept}
       selected={selected}
       color={"#E0FFE0"}
       content={
-        <div style={ContentIOStyle}>
-          {"= " + data.value}
-          <Handle
-            type="target"
-            position={Position.Left}
-            id="i__value"
-            style={{ ...ContentHandleStyle, ...ContentLeftStyle }}
-            isValidConnection={isValidInput}
-          />
-          <Handle
-            type="source"
-            position={Position.Right}
-            id="o__value"
-            style={{ ...ContentHandleStyle, ...ContentTextRightStyle }}
-            isValidConnection={isValidOutput}
-          />
-        </div>
+        <>
+          <div style={ContentHeaderStyle}>{"Properties"}</div>
+          {
+            Object.entries(data.properties).map((property: [string, PropertyStructure]) => (
+              <div
+                key={property[0]}
+                style={{ ...ContentIOStyle, ...ContentTextLeftStyle }}
+              >
+                {property[0]}
+                <Handle
+                  type="target"
+                  position={Position.Left}
+                  id={property[1].parent + "." + property[1].concept}
+                  style={{ ...ContentHandleStyle, ...ContentLeftStyle }}
+                  isValidConnection={(connection: Connection) =>
+                    isValidProperty(connection, property[1].parent + "." + property[1].concept)
+                  }
+                />
+              </div>
+            ))
+          }
+        </>
       }
     />
   );
