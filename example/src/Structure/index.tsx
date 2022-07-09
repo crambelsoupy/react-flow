@@ -1,4 +1,4 @@
-import { EventStructure, FunctionPropertyStructure, ProcessStructure, PropertyStructure } from '@elaraai/edk/lib';
+import { ELARASchema, EventStructure, FunctionPropertyStructure, ProcessStructure, PropertyStructure, Structure } from '@elaraai/edk/lib';
 import { MouseEvent as ReactMouseEvent, CSSProperties, useCallback } from 'react';
 import ReactFlow, {
   addEdge,
@@ -17,7 +17,7 @@ import ReactFlow, {
   MarkerType,
   Position,
 } from 'react-flow-renderer';
-import { Process, Resource } from './Data';
+import schema from './schema.json'
 import ProcessNode from './ProcessNode';
 import ResourceNode from './ResourceNode';
 import StructureEdge from './StructureEdge';
@@ -50,24 +50,37 @@ const onEdgeDoubleClick = (_: ReactMouseEvent, edge: Edge) => console.log('edge 
 const onNodesDelete = (nodes: Node[]) => console.log('nodes delete', nodes);
 const onEdgesDelete = (edges: Edge[]) => console.log('edges delete', edges);
 
-const initialNodes: Node[] = [
-  {
-    id: Process.concept,
-    type: "process",
-    data: Process,
-    position: { x: 500, y: 80 },
-    sourcePosition: Position.Right,
-    targetPosition: Position.Left,
-  },
-  {
-    id: Resource.concept,
-    type: "resource",
-    data: Resource,
-    position: { x: 700, y: 180 },
-    sourcePosition: Position.Right,
-    targetPosition: Position.Left,
-  },
-];
+
+const initialNodes: Node[] = Object.entries(((schema as unknown as ELARASchema)?.structure ?? {}) as unknown as Record<string, Structure>)
+  .filter((entry: [key: string, structure: Structure]) => entry[1].type === 'process' || entry[1].type === 'resource')
+  .map((entry: [key: string, structure: Structure], index: number) => ({
+      id: entry[0],
+      type: entry[1].type,
+      data: entry[1],
+      position: { x: 500 * index, y: 80 * index },
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
+    })
+  )
+
+// const initialNodes: Node[] = [
+//   {
+//     id: Process.concept,
+//     type: "process",
+//     data: Process,
+//     position: { x: 500, y: 80 },
+//     sourcePosition: Position.Right,
+//     targetPosition: Position.Left,
+//   },
+//   {
+//     id: Resource.concept,
+//     type: "resource",
+//     data: Resource,
+//     position: { x: 700, y: 180 },
+//     sourcePosition: Position.Right,
+//     targetPosition: Position.Left,
+//   },
+// ];
 
 let getPropertyEdges = initialNodes
   .filter(node => node.type === 'process')
