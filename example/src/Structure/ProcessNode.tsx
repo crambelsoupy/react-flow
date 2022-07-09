@@ -4,13 +4,13 @@ import { Connection, Handle, Position } from "react-flow-renderer";
 import Node, { ContentHandleStyle, ContentHeaderStyle, ContentIOStyle, ContentLeftStyle, ContentTextLeftStyle, ContentTextRightStyle } from "./Node";
 import { ResourceStructure, ProcessStructure, PropertyStructure, EventStructure } from "@elaraai/edk/lib";
 
-const isValidProperty = (connection: Connection, value: string) => {
-  console.log('Process.isValidProperty', { connection, value, ret: connection.source ? connection.sourceHandle === value : false})
-  return connection.source ? connection.sourceHandle === value : false;
+const isValidGetProperty = (connection: Connection, value: string) => {
+  console.log('Process.isValidGetProperty', { connection, value, ret: connection.source ? connection.sourceHandle === value : false})
+  return connection.sourceHandle ? connection.sourceHandle === value : false;
 }
 const isValidEvent = (connection: Connection, value: string) => {
   console.log('Process.isValidEvent', { connection, value, ret: connection.target ? connection.targetHandle === value : false})
-  return connection.source ? connection.sourceHandle === value : false;
+  return connection.sourceHandle ? connection.sourceHandle === value : false;
 }
 
 interface ProcessNodeProps {
@@ -52,11 +52,12 @@ const ProcessNode: React.FC<ProcessNodeProps> = ({
                   {property[0]}
                   <Handle
                     type="target"
+                    isConnectable={false}
                     position={Position.Left}
                     id={property[1].parent + "." + property[1].concept}
                     style={{ ...ContentHandleStyle, ...ContentLeftStyle }}
                     isValidConnection={(connection: Connection) =>
-                      isValidProperty(connection, property[1].parent + "." + property[1].concept)
+                      isValidGetProperty(connection, property[1].parent + "." + property[1].concept)
                     }
                   />
                 </div> :
@@ -78,6 +79,7 @@ const ProcessNode: React.FC<ProcessNodeProps> = ({
                 {property[0]}
                 <Handle
                   type="source"
+                  isConnectable={false}
                   position={Position.Right}
                   id={property[1].process + "." + property[1].event}
                   style={{ ...ContentHandleStyle, ...ContentTextRightStyle }}

@@ -161,7 +161,12 @@ const nodeColor = (n: Node): string => {
 const OverviewFlow = () => {
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const onConnect = useCallback((params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
+  // const onConnect = useCallback((params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
+
+  
+  const onConnect = (connection: Connection) => {
+    console.log({ func: 'onConnect', connection })
+  }
 
   return (
     <ReactFlow

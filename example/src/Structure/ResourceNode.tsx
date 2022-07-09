@@ -1,12 +1,17 @@
 import React, { memo } from "react";
 import * as R from "ramda";
 import { Connection, Handle, Position } from "react-flow-renderer";
-import Node, { ContentHandleStyle, ContentHeaderStyle, ContentIOStyle, ContentLeftStyle, ContentTextLeftStyle, ContentTextRightStyle } from "./Node";
+import Node, { ContentHandleStyle, ContentHeaderStyle, ContentIOStyle, ContentLeftStyle, ContentRightStyle, ContentTextLeftStyle, ContentTextRightStyle } from "./Node";
 import { ResourceStructure, ProcessStructure, PropertyStructure, EventStructure, Table } from "@elaraai/edk/lib";
 
-const isValidProperty = (connection: Connection, value: string) => {
-  console.log('Resource.isValidProperty', { connection, value})
-  return connection.source ? connection.source === value : false
+const isValidEvent = (connection: Connection, value: string) => {
+  console.log('Resource.isValidEvent', { connection, value})
+  return connection.targetHandle ? connection.targetHandle === value : false
+};
+
+const isValidGetProperty = (connection: Connection, value: string) => {
+  console.log('Resource.isValidGetProperty', { connection, value})
+  return connection.sourceHandle ? connection.sourceHandle === value : false
 };
 
 interface ResourceNodeProps {
@@ -44,10 +49,21 @@ const ResourceNode: React.FC<ResourceNodeProps> = ({
                 <Handle
                   type="target"
                   position={Position.Left}
-                  id={property[1].parent + "." + property[1].concept}
+                  id={property[1].parent + "." + property[1].concept + '.event'}
                   style={{ ...ContentHandleStyle, ...ContentLeftStyle }}
+                  isConnectable={false}
                   isValidConnection={(connection: Connection) =>
-                    isValidProperty(connection, property[1].parent + "." + property[1].concept)
+                    isValidEvent(connection, property[1].parent + "." + property[1].concept + '.event')
+                  }
+                />
+                <Handle
+                  type="source"
+                  position={Position.Right}
+                  id={property[1].parent + "." + property[1].concept + '.property'}
+                  style={{ ...ContentHandleStyle, ...ContentRightStyle }}
+                  isConnectable={false}
+                  isValidConnection={(connection: Connection) =>
+                    isValidGetProperty(connection, property[1].parent + "." + property[1].concept + '.property')
                   }
                 />
               </div>

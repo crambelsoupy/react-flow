@@ -1,3 +1,4 @@
+import { EventStructure, FunctionPropertyStructure, ProcessStructure, PropertyStructure } from '@elaraai/edk/lib';
 import { MouseEvent as ReactMouseEvent, CSSProperties, useCallback } from 'react';
 import ReactFlow, {
   addEdge,
@@ -13,11 +14,13 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   OnSelectionChangeParams,
-  EdgeChange,
+  MarkerType,
+  Position,
 } from 'react-flow-renderer';
 import { Process, Resource } from './Data';
 import ProcessNode from './ProcessNode';
 import ResourceNode from './ResourceNode';
+import StructureEdge from './StructureEdge';
 
 const onNodeDragStart = (_: ReactMouseEvent, node: Node, nodes: Node[]) => console.log('drag start', node, nodes);
 const onNodeDrag = (_: ReactMouseEvent, node: Node, nodes: Node[]) => console.log('drag', node, nodes);
@@ -35,7 +38,7 @@ const onSelectionContextMenu = (event: ReactMouseEvent, nodes: Node[]) => {
 };
 const onNodeClick = (_: ReactMouseEvent, node: Node) => console.log('node click:', node);
 const onSelectionChange = ({ nodes, edges }: OnSelectionChangeParams) => console.log('selection change', nodes, edges);
-const onInit = (reactFlowInstance: ReactFlowInstance) => console.log('pane ready:', reactFlowInstance);
+const onInit = (reactFlowInstance: ReactFlowInstance) => console.log('onInit:', reactFlowInstance);
 
 const onMoveStart = (_: MouseEvent | TouchEvent, viewport: Viewport) => console.log('zoom/move start', viewport);
 const onMoveEnd = (_: MouseEvent | TouchEvent, viewport: Viewport) => console.log('zoom/move end', viewport);
@@ -52,19 +55,87 @@ const initialNodes: Node[] = [
     id: Process.concept,
     type: "process",
     data: Process,
-    position: { x: 500, y: 80 }
+    position: { x: 500, y: 80 },
+    sourcePosition: Position.Right,
+    targetPosition: Position.Left,
   },
   {
     id: Resource.concept,
     type: "resource",
     data: Resource,
     position: { x: 700, y: 180 },
+    sourcePosition: Position.Right,
+    targetPosition: Position.Left,
   },
 ];
 
+let getPropertyEdges = initialNodes
+  .filter(node => node.type === 'process')
+  .flatMap((node: Node<ProcessStructure>) =>
+    Object.values(node?.data?.properties)
+      .filter((property: PropertyStructure) =>
+        property.kind === 'function' &&
+        (
+          property.function.function === 'getproperty' ||
+          property.function.function === 'getproperties'
+        )
+      )
+      .map((property: PropertyStructure) => {
+        let funcProperty = property as FunctionPropertyStructure;
+        let func = funcProperty.function
+        if (func.function === 'getproperty') {
+          return {
+            id: `${func.property_parent}.${func.property_concept}.${funcProperty.parent}.${funcProperty.concept}`,
+            source: `${func.property_parent}`,
+            target: `${funcProperty.parent}`,
+            sourceHandle: `${func.property_parent}.${func.property_concept}.property`,
+            targetHandle: `${funcProperty.parent}.${funcProperty.concept}`,
+            sourcePosition: Position.Right,
+            targetPosition: Position.Left,
+            markerEnd: MarkerType.ArrowClosed,
+            type: 'custom',
+            animated: false
+          }
+        } else if (func.function === 'getproperties') {
+          return {
+            id: `${func.property_parent}.${func.property_concept}.${funcProperty.parent}.${funcProperty.concept}`,
+            source: `${func.property_parent}`,
+            target: `${funcProperty.parent}`,
+            sourceHandle: `${func.property_parent}.${func.property_concept}`,
+            targetHandle: `${funcProperty.parent}.${funcProperty.concept}`,
+            markerEnd: MarkerType.ArrowClosed,
+            sourcePosition: Position.Right,
+            targetPosition: Position.Left,
+            type: 'custom',
+            animated: false
+          }
+        }
+      }) as Edge[]
+  )
+
+let eventEdges = initialNodes
+  .filter(node => node.type === 'process')
+  .flatMap((node: Node<ProcessStructure>) =>
+    Object.values(node?.data?.events)
+      .map((event: EventStructure) => {
+        return {
+          id: `${event.process}.${event.event}.${event.property.parent}.${event.property.concept}`,
+          source: `${event.process}`,
+          target: `${event.property.parent}`,
+          sourceHandle: `${event.process}.${event.event}`,
+          targetHandle: `${event.property.parent}.${event.property.concept}.event`,
+          type: 'custom',
+          markerEnd: MarkerType.ArrowClosed,
+          sourcePosition: Position.Right,
+          targetPosition: Position.Left,
+          animated: false
+        }
+      }) as Edge[]
+  )
+
 const initialEdges: Edge[] = [
-  { id: "cash.balance_sales.cash_balance", source: "cash.balance", target: "sales.cash_balance", animated: false },
-  { id: "sales.increment_cash_cash.balance", source: "sales.increment_cash", target: "cash.balance", animated: false }
+  ...getPropertyEdges,
+  ...eventEdges
 ];
 
 const connectionLineStyle: CSSProperties = { stroke: '#ddd' };
@@ -84,16 +155,23 @@ const nodeTypes = {
   resource: ResourceNode
 };
 
+const edgeTypes = {
+  custom: StructureEdge,
+};
+
 const OverviewFlow = () => {
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const onConnect = useCallback((params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
+  // console.log({ edges, setEdges })
+  const onConnect = (params: Connection | Edge) => setEdges((eds) => addEdge(params, eds));
+
 
   return (
     <ReactFlow
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
+      edgeTypes={edgeTypes}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onNodeClick={onNodeClick}
