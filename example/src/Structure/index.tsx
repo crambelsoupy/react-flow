@@ -110,7 +110,7 @@ let getPropertyEdges = initialNodes
             animated: false
           }
         }
-      }) as Edge[]
+      }) as Edge<{ name: string }>[]
   )
 
 let eventEdges = initialNodes
@@ -130,7 +130,7 @@ let eventEdges = initialNodes
           targetPosition: Position.Left,
           animated: false
         }
-      }) as Edge[]
+      }) as Edge<{ name: string }>[]
   )
 
 const initialEdges: Edge[] = [
