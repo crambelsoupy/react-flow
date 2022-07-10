@@ -20,7 +20,9 @@ import ReactFlow, {
 import schema from './schema.json'
 import ProcessNode from './ProcessNode';
 import ResourceNode from './ResourceNode';
-import StructureEdge from './StructureEdge';
+// import StructureEdge from './StructureEdge';
+import { ElkNode } from 'elkjs';
+import { toSnakeCase } from './Node';
 
 const onNodeDragStart = (_: ReactMouseEvent, node: Node, nodes: Node[]) => console.log('drag start', node, nodes);
 const onNodeDrag = (_: ReactMouseEvent, node: Node, nodes: Node[]) => console.log('drag', node, nodes);
@@ -50,106 +52,88 @@ const onEdgeDoubleClick = (_: ReactMouseEvent, edge: Edge) => console.log('edge 
 const onNodesDelete = (nodes: Node[]) => console.log('nodes delete', nodes);
 const onEdgesDelete = (edges: Edge[]) => console.log('edges delete', edges);
 
+export type EdgeType = {
+  name: string
+}
 
-const initialNodes: Node[] = Object.entries(((schema as unknown as ELARASchema)?.structure ?? {}) as unknown as Record<string, Structure>)
+const initialNodes: Node<Structure>[] = Object.entries(((schema as unknown as ELARASchema)?.structure ?? {}) as unknown as Record<string, Structure>)
   .filter((entry: [key: string, structure: Structure]) => entry[1].type === 'process' || entry[1].type === 'resource')
   .map((entry: [key: string, structure: Structure], index: number) => ({
-      id: entry[0],
-      type: entry[1].type,
-      data: entry[1],
-      position: { x: 500 * index, y: 80 * index },
-      sourcePosition: Position.Right,
-      targetPosition: Position.Left,
-    })
-  )
-
-// const initialNodes: Node[] = [
-//   {
-//     id: Process.concept,
-//     type: "process",
-//     data: Process,
-//     position: { x: 500, y: 80 },
-//     sourcePosition: Position.Right,
-//     targetPosition: Position.Left,
-//   },
-//   {
-//     id: Resource.concept,
-//     type: "resource",
-//     data: Resource,
-//     position: { x: 700, y: 180 },
-//     sourcePosition: Position.Right,
-//     targetPosition: Position.Left,
-//   },
-// ];
-
-let getPropertyEdges = initialNodes
-  .filter(node => node.type === 'process')
-  .flatMap((node: Node<ProcessStructure>) =>
-    Object.values(node?.data?.properties)
-      .filter((property: PropertyStructure) =>
-        property.kind === 'function' &&
-        (
-          property.function.function === 'getproperty' ||
-          property.function.function === 'getproperties'
-        )
-      )
-      .map((property: PropertyStructure) => {
-        let funcProperty = property as FunctionPropertyStructure;
-        let func = funcProperty.function
-        if (func.function === 'getproperty') {
-          return {
-            id: `${func.property_parent}.${func.property_concept}.${funcProperty.parent}.${funcProperty.concept}`,
-            source: `${func.property_parent}`,
-            target: `${funcProperty.parent}`,
-            sourceHandle: `${func.property_parent}.${func.property_concept}.property`,
-            targetHandle: `${funcProperty.parent}.${funcProperty.concept}`,
-            sourcePosition: Position.Right,
-            targetPosition: Position.Left,
-            markerEnd: MarkerType.ArrowClosed,
-            type: 'custom',
-            animated: false
-          }
-        } else if (func.function === 'getproperties') {
-          return {
-            id: `${func.property_parent}.${func.property_concept}.${funcProperty.parent}.${funcProperty.concept}`,
-            source: `${func.property_parent}`,
-            target: `${funcProperty.parent}`,
-            sourceHandle: `${func.property_parent}.${func.property_concept}`,
-            targetHandle: `${funcProperty.parent}.${funcProperty.concept}`,
-            markerEnd: MarkerType.ArrowClosed,
-            sourcePosition: Position.Right,
-            targetPosition: Position.Left,
-            type: 'custom',
-            animated: false
-          }
-        }
-      }) as Edge<{ name: string }>[]
-  )
-
-let eventEdges = initialNodes
-  .filter(node => node.type === 'process')
-  .flatMap((node: Node<ProcessStructure>) =>
-    Object.values(node?.data?.events)
-      .map((event: EventStructure) => {
-        return {
-          id: `${event.process}.${event.event}.${event.property.parent}.${event.property.concept}`,
-          source: `${event.process}`,
-          target: `${event.property.parent}`,
-          sourceHandle: `${event.process}.${event.event}`,
-          targetHandle: `${event.property.parent}.${event.property.concept}.event`,
-          type: 'custom',
-          markerEnd: MarkerType.ArrowClosed,
-          sourcePosition: Position.Right,
-          targetPosition: Position.Left,
-          animated: false
-        }
-      }) as Edge<{ name: string }>[]
-  )
+    id: toSnakeCase(entry[1].concept),
+    type: entry[1].type,
+    data: entry[1],
+    zIndex: 3,
+    position: { x: 500 * index, y: 80 * index },
+    sourcePosition: Position.Right,
+    targetPosition: Position.Left,
+  }))
 
 const initialEdges: Edge[] = [
-  ...getPropertyEdges,
-  ...eventEdges
+  ...initialNodes
+    .filter(node => node.type === 'process')
+    .flatMap((node: Node<Structure>) => {
+      let process = node.data as ProcessStructure;
+      return Object.values(process?.properties ?? {})
+        .filter((property: PropertyStructure) =>
+          property.kind === 'function' &&
+          (
+            property.function.function === 'getproperty' ||
+            property.function.function === 'getproperties'
+          )
+        )
+        .map((property: PropertyStructure) => {
+          let func = property as FunctionPropertyStructure;
+          if (func.function.function === 'getproperty') {
+            return {
+              id: toSnakeCase(`${func.function.property_parent}.${func.function.property_concept}.output.${func.parent}.${func.concept}.input`),
+              source: toSnakeCase(`${func.function.property_parent}`),
+              target: toSnakeCase(`${func.parent}`),
+              sourceHandle: toSnakeCase(`${func.function.property_parent}.${func.function.property_concept}.output`),
+              targetHandle: toSnakeCase(`${func.parent}.${func.concept}.input`),
+              sourcePosition: Position.Right,
+              targetPosition: Position.Left,
+              style: { stroke: '#DE8387', strokeWidth: 3 },
+              animated: false
+            }
+          } else if (func.function.function === 'getproperties') {
+            return {
+              id: toSnakeCase(`${func.function.property_parent}.${func.function.property_concept}.output.${func.parent}.${func.concept}.input`),
+              source: toSnakeCase(`${func.function.property_parent}`),
+              target: toSnakeCase(`${func.parent}`),
+              sourceHandle: toSnakeCase(`${func.function.property_parent}.${func.function.property_concept}.output`),
+              targetHandle: toSnakeCase(`${func.parent}.${func.concept}.input`),
+              sourcePosition: Position.Right,
+              targetPosition: Position.Left,
+              style: { stroke: '#DE8387', strokeWidth: 3 },
+              animated: false
+            }
+          }
+        }) as Edge<EdgeType>[]
+    }),
+  ...initialNodes
+    .filter(node => node.type === 'process')
+    .flatMap((node: Node<Structure>) => {
+      let process = node.data as ProcessStructure;
+      return Object.values(process?.events ?? {})
+        .map((event: EventStructure) => {
+          return {
+            id: toSnakeCase(`${event.process}.${event.event}.output.${event.property.parent}.${event.property.concept}.input`),
+            source: toSnakeCase(`${event.process}`),
+            target: toSnakeCase(`${event.property.parent}`),
+            sourceHandle: toSnakeCase(`${event.process}.${event.event}.output`),
+            targetHandle: toSnakeCase(`${event.property.parent}.${event.property.concept}.input`),
+            label: event.event,
+            markerEnd: MarkerType.ArrowClosed,
+            sourcePosition: Position.Right,
+            targetPosition: Position.Left,
+            style: { stroke: '#4AD998', strokeWidth: 3 },
+            animated: false
+          }
+        }) as Edge<EdgeType>[]
+    })
 ];
+
+console.log({ initialNodes, initialEdges })
 
 const connectionLineStyle: CSSProperties = { stroke: '#ddd' };
 const snapGrid: SnapGrid = [25, 25];
@@ -168,23 +152,60 @@ const nodeTypes = {
   resource: ResourceNode
 };
 
-const edgeTypes = {
-  custom: StructureEdge,
+const getLayoutedElements = (nodes: Node<Structure>[], edges: Edge<{ name: string }>[]) => {
+  const graph: ElkNode = {
+    id: "root",
+    layoutOptions: { 'elk.algorithm': 'layered' },
+    children: [
+      { id: "n1", width: 400, height: 31 },
+      { id: "n2", width: 30, height: 30 },
+      { id: "n3", width: 30, height: 30 }
+    ],
+    edges: [
+    ]
+  }
+
+
+  // nodes.forEach((node) => {
+  //   dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+  // });
+
+  // edges.forEach((edge) => {
+  //   dagreGraph.setEdge(edge.source, edge.target);
+  // });
+
+  // dagre.layout(dagreGraph);
+
+  // nodes.forEach((node) => {
+  //   const nodeWithPosition = dagreGraph.node(node.id);
+  //   node.targetPosition = isHorizontal ? 'left' : 'top';
+  //   node.sourcePosition = isHorizontal ? 'right' : 'bottom';
+
+  //   // We are shifting the dagre node position (anchor=center center) to the top left
+  //   // so it matches the React Flow node anchor point (top left).
+  //   node.position = {
+  //     x: nodeWithPosition.x - nodeWidth / 2,
+  //     y: nodeWithPosition.y - nodeHeight / 2,
+  //   };
+
+  //   return node;
+  // });
+
+  return { nodes, edges };
 };
 
 const OverviewFlow = () => {
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  // console.log({ edges, setEdges })
+  console.log({ edges, nodes })
   const onConnect = (params: Connection | Edge) => setEdges((eds) => addEdge(params, eds));
-
 
   return (
     <ReactFlow
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
-      edgeTypes={edgeTypes}
+      // edgeTypes={edgeTypes}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onNodeClick={onNodeClick}

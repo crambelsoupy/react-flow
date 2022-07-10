@@ -1,6 +1,9 @@
 
 import React, { CSSProperties, memo } from "react";
 
+export function toSnakeCase(str: string): string {
+    return str ? str.match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g)?.map(x => x.toLowerCase())?.join('_') ?? "" : ""
+}
 
 export const ContentHeaderStyle: CSSProperties = {
     padding: "8px 0px",
@@ -15,12 +18,12 @@ export const ContentIOStyle: CSSProperties = {
 }
 
 export const ContentLeftStyle: CSSProperties = {
-    left: "-8px"
+    left: "-4px"
 }
 
 export const ContentHandleStyle: CSSProperties = {
-    width: "10px", // Does not work
-    height: "10px",
+    width: "4px",
+    height: "4px",
     margin: "auto",
     background: "#ddd",
     borderRadius: "15px",
@@ -34,7 +37,7 @@ export const ContentTextLeftStyle: CSSProperties = {
 }
 
 export const ContentRightStyle: CSSProperties = {
-    right: "-8px"
+    right: "-4px"
 }
 
 export const ContentTextRightStyle: CSSProperties = {
@@ -42,6 +45,7 @@ export const ContentTextRightStyle: CSSProperties = {
 }
 
 const NodeBodyStyle: CSSProperties = {
+    width: 400,
     display: "flex",
     flexDirection: "column",
     backgroundColor: "#fff",

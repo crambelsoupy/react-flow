@@ -6,6 +6,7 @@
     "@elaraai/edk": "^3.9.3",
     "@types/ramda": "^0.28.14",
     "dagre": "^0.8.5",
+    "elkjs": "^0.7.1",
     "localforage": "^1.10.0",
     "ramda": "^0.28.0",
     "react": "file:../node_modules/react",

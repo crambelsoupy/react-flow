@@ -1,17 +1,8 @@
 import React, { memo } from "react";
 import * as R from "ramda";
 import { Connection, Handle, Position } from "react-flow-renderer";
-import Node, { ContentHandleStyle, ContentHeaderStyle, ContentIOStyle, ContentLeftStyle, ContentTextLeftStyle, ContentTextRightStyle } from "./Node";
+import Node, { ContentHandleStyle, ContentHeaderStyle, ContentIOStyle, ContentLeftStyle, ContentRightStyle, ContentTextLeftStyle, ContentTextRightStyle, toSnakeCase } from "./Node";
 import { ResourceStructure, ProcessStructure, PropertyStructure, EventStructure } from "@elaraai/edk/lib";
-
-const isValidGetProperty = (connection: Connection, value: string) => {
-  console.log('Process.isValidGetProperty', { connection, value, ret: connection.source ? connection.sourceHandle === value : false})
-  return connection.sourceHandle ? connection.sourceHandle === value : false;
-}
-const isValidEvent = (connection: Connection, value: string) => {
-  console.log('Process.isValidEvent', { connection, value, ret: connection.target ? connection.targetHandle === value : false})
-  return connection.sourceHandle ? connection.sourceHandle === value : false;
-}
 
 interface ProcessNodeProps {
   data: {
@@ -34,7 +25,7 @@ const ProcessNode: React.FC<ProcessNodeProps> = ({
     <Node
       label={data.concept}
       selected={selected}
-      color={"Lavender"}
+      color={"#F7DD20"}
       content={
         <>
           <div style={ContentHeaderStyle}>{"Properties"}</div>
@@ -46,7 +37,7 @@ const ProcessNode: React.FC<ProcessNodeProps> = ({
                   property[1].function.function === 'getproperties'
                 ) ?
                 <div
-                  key={property[0]}
+                  key={toSnakeCase(property[0])}
                   style={{ ...ContentIOStyle, ...ContentTextLeftStyle }}
                 >
                   {property[0]}
@@ -54,11 +45,15 @@ const ProcessNode: React.FC<ProcessNodeProps> = ({
                     type="target"
                     isConnectable={false}
                     position={Position.Left}
-                    id={property[1].parent + "." + property[1].concept}
+                    id={toSnakeCase(property[1].parent + "." + property[1].concept + '.input')}
                     style={{ ...ContentHandleStyle, ...ContentLeftStyle }}
-                    isValidConnection={(connection: Connection) =>
-                      isValidGetProperty(connection, property[1].parent + "." + property[1].concept)
-                    }
+                  />
+                  <Handle
+                    type="source"
+                    isConnectable={false}
+                    position={Position.Right}
+                    id={toSnakeCase(property[1].parent + "." + property[1].concept + '.output')}
+                    style={{ ...ContentHandleStyle, ...ContentRightStyle }}
                   />
                 </div> :
                 <div
@@ -66,26 +61,30 @@ const ProcessNode: React.FC<ProcessNodeProps> = ({
                   style={{ ...ContentIOStyle, ...ContentTextLeftStyle }}
                 >
                   {property[0]} ({property[1].kind === 'function' ? property[1].function.function : property[1].kind})
+                  <Handle
+                    type="source"
+                    isConnectable={false}
+                    position={Position.Right}
+                    id={toSnakeCase(property[1].parent + "." + property[1].concept + '.output')}
+                    style={{ ...ContentHandleStyle, ...ContentRightStyle }}
+                  />
                 </div>
             ))
           }
           <div style={ContentHeaderStyle}>{"Events"}</div>
           {
-            Object.entries(data.events).map((property: [string, EventStructure]) => (
+            Object.entries(data.events).map((event: [string, EventStructure]) => (
               <div
-                key={"o-" + property[0]}
+                key={toSnakeCase(event[0])}
                 style={{ ...ContentIOStyle, ...ContentTextRightStyle }}
               >
-                {property[0]}
+                {event[0]}
                 <Handle
                   type="source"
                   isConnectable={false}
                   position={Position.Right}
-                  id={property[1].process + "." + property[1].event}
-                  style={{ ...ContentHandleStyle, ...ContentTextRightStyle }}
-                  isValidConnection={(connection: Connection) =>
-                    isValidEvent(connection, property[1].process + "." + property[1].event)
-                  }
+                  id={toSnakeCase(event[1].process + "." + event[1].event + '.output')}
+                  style={{ ...ContentHandleStyle, ...ContentRightStyle }}
                 />
               </div>
 
