@@ -16,13 +16,15 @@ import ReactFlow, {
   OnSelectionChangeParams,
   MarkerType,
   Position,
+  ControlButton,
 } from 'react-flow-renderer';
 import schema from './schema.json'
 import ProcessNode from './ProcessNode';
 import ResourceNode from './ResourceNode';
 // import StructureEdge from './StructureEdge';
-import { ElkNode } from 'elkjs';
+import ELK, { ElkNode } from 'elkjs';
 import { toSnakeCase } from './Node';
+import { NodeBuilderFlags } from 'typescript';
 
 const onNodeDragStart = (_: ReactMouseEvent, node: Node, nodes: Node[]) => console.log('drag start', node, nodes);
 const onNodeDrag = (_: ReactMouseEvent, node: Node, nodes: Node[]) => console.log('drag', node, nodes);
@@ -51,10 +53,6 @@ const onEdgeMouseLeave = (_: ReactMouseEvent, edge: Edge) => console.log('edge m
 const onEdgeDoubleClick = (_: ReactMouseEvent, edge: Edge) => console.log('edge double click', edge);
 const onNodesDelete = (nodes: Node[]) => console.log('nodes delete', nodes);
 const onEdgesDelete = (edges: Edge[]) => console.log('edges delete', edges);
-
-export type EdgeType = {
-  name: string
-}
 
 const initialNodes: Node<Structure>[] = Object.entries(((schema as unknown as ELARASchema)?.structure ?? {}) as unknown as Record<string, Structure>)
   .filter((entry: [key: string, structure: Structure]) => entry[1].type === 'process' || entry[1].type === 'resource')
@@ -108,7 +106,7 @@ const initialEdges: Edge[] = [
               animated: false
             }
           }
-        }) as Edge<EdgeType>[]
+        }) as Edge[]
     }),
   ...initialNodes
     .filter(node => node.type === 'process')
@@ -129,7 +127,7 @@ const initialEdges: Edge[] = [
             style: { stroke: '#4AD998', strokeWidth: 3 },
             animated: false
           }
-        }) as Edge<EdgeType>[]
+        }) as Edge[]
     })
 ];
 
@@ -152,60 +150,77 @@ const nodeTypes = {
   resource: ResourceNode
 };
 
-const getLayoutedElements = (nodes: Node<Structure>[], edges: Edge<{ name: string }>[]) => {
+const getLayoutedElements = async (nodes: Node<Structure>[], edges: Edge<{ name: string }>[]) => {
+  const elk = new ELK()
+  // consolidate the edges to be between structure entities
+  let layoutEdges: Map<string, { id: string,  sources: string[], targets: string[] }> = new Map()
+  edges.forEach(edge => {
+    let id = `${edge.source}.${edge.target}` 
+    if(!layoutEdges.has(id)) {
+      layoutEdges.set(id, { 
+        id: id,
+        sources: [edge.source],  
+        targets: [edge.target] 
+      })
+    }
+  })
+
+  let layoutNodes: Map<string, Node<Structure>> = new Map()
+  nodes.forEach(node => {
+    if(!layoutNodes.has(node.id)) {
+      layoutNodes.set(node.id, node)
+    }
+  })
+
   const graph: ElkNode = {
     id: "root",
-    layoutOptions: { 'elk.algorithm': 'layered' },
-    children: [
-      { id: "n1", width: 400, height: 31 },
-      { id: "n2", width: 30, height: 30 },
-      { id: "n3", width: 30, height: 30 }
-    ],
-    edges: [
-    ]
+    layoutOptions: { 'elk.algorithm': 'force' },
+    children: Array.from(layoutNodes.values()).map(node => ({
+      id: node.id,
+      width: node.width ?? undefined,
+      height: node.height ?? undefined,
+    })),
+    edges: Array.from(layoutEdges.values())
   }
-
-
-  // nodes.forEach((node) => {
-  //   dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
-  // });
-
-  // edges.forEach((edge) => {
-  //   dagreGraph.setEdge(edge.source, edge.target);
-  // });
-
-  // dagre.layout(dagreGraph);
-
-  // nodes.forEach((node) => {
-  //   const nodeWithPosition = dagreGraph.node(node.id);
-  //   node.targetPosition = isHorizontal ? 'left' : 'top';
-  //   node.sourcePosition = isHorizontal ? 'right' : 'bottom';
-
-  //   // We are shifting the dagre node position (anchor=center center) to the top left
-  //   // so it matches the React Flow node anchor point (top left).
-  //   node.position = {
-  //     x: nodeWithPosition.x - nodeWidth / 2,
-  //     y: nodeWithPosition.y - nodeHeight / 2,
-  //   };
-
-  //   return node;
-  // });
-
-  return { nodes, edges };
+  let layout = await elk.layout(graph)
+  layout?.children?.forEach((layoutNode) => {
+    const node = layoutNodes.get(layoutNode.id);
+    if(node) {
+      node.position = {
+        x: (layoutNode?.x ?? 0) - (node?.width ?? 0) / 2,
+        y: (layoutNode?.y ?? 0) - (node?.height ?? 0) / 2,
+      }
+      layoutNodes.set(layoutNode.id, node);
+    }
+  });
+  return { 
+    nodes: Array.from(layoutNodes.values()), 
+    edges 
+  };
 };
 
 const OverviewFlow = () => {
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   console.log({ edges, nodes })
   const onConnect = (params: Connection | Edge) => setEdges((eds) => addEdge(params, eds));
+  const onLayout = useCallback(
+    async () => {
+      const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(
+        nodes,
+        edges,
+      );
 
+      setNodes([...layoutedNodes]);
+      setEdges([...layoutedEdges]);
+    },
+    [nodes, edges]
+  );
   return (
     <ReactFlow
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
-      // edgeTypes={edgeTypes}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onNodeClick={onNodeClick}
@@ -254,7 +269,11 @@ const OverviewFlow = () => {
         }}
         nodeBorderRadius={2}
       />
-      <Controls />
+      <Controls>
+        <ControlButton onClick={() => onLayout()}>
+          L
+        </ControlButton>
+      </Controls>
       <Background color="#aaa" gap={25} />
     </ReactFlow>
   );

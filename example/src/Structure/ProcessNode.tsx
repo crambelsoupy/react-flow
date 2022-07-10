@@ -26,7 +26,7 @@ const ProcessNode: React.FC<ProcessNodeProps> = ({
       label={data.concept}
       selected={selected}
       color={"#F7DD20"}
-      content={
+      content= {
         <>
           <div style={ContentHeaderStyle}>{"Properties"}</div>
           {
@@ -87,7 +87,6 @@ const ProcessNode: React.FC<ProcessNodeProps> = ({
                   style={{ ...ContentHandleStyle, ...ContentRightStyle }}
                 />
               </div>
-
             ))
           }
         </>
